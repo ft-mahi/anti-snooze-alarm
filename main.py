@@ -6,7 +6,27 @@ from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
-from config import ALARM_TIME, SECRET_KEY
+from config import ALARM_TIME as CONFIG_ALARM_TIME, SECRET_KEY
+
+
+def parse_alarm_time(alarm_time_str):
+    """Normalize alarm time to 24-hour format for comparison and 12-hour format for display."""
+    normalized = alarm_time_str.strip()
+    for fmt in ("%I:%M %p", "%H:%M"):
+        try:
+            target = datetime.datetime.strptime(
+                normalized.upper() if fmt.endswith("%p") else normalized,
+                fmt,
+            )
+            return target.strftime("%H:%M"), target.strftime("%I:%M %p").lstrip("0")
+        except ValueError:
+            continue
+    raise ValueError(
+        "ALARM_TIME must be 'HH:MM' in 24-hour format or 'HH:MM AM/PM' in 12-hour format."
+    )
+
+
+ALARM_TIME, ALARM_TIME_LABEL = parse_alarm_time(CONFIG_ALARM_TIME)
 
 def force_max_windows_volume():
     """Forces Windows Master Volume to 100% and unmutes it."""
@@ -20,7 +40,7 @@ def force_max_windows_volume():
         pass # Ignore errors if audio drivers momentarily glitch
 
 def run_text_alarm():
-    print(f"⏰ Text-input Alarm Active. Armed for {ALARM_TIME}...")
+    print(f"⏰ Text-input Alarm Active. Armed for {ALARM_TIME_LABEL}...")
     
     mixer.init()
     
